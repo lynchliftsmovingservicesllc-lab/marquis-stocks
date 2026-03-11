@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Stock Volatility Tracker</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 900px;
+      margin: 30px auto;
+      padding: 20px;
+      background: #f4f6f9;
+    }
+
+    h1 {
+      text-align: center;
+      color: #222;
+    }
+
+    .card {
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+      margin-bottom: 20px;
+    }
+
+    label {
+      font-weight: bold;
+      display: block;
+      margin-top: 10px;
+      margin-bottom: 6px;
+    }
+
+    input, textarea, button {
+      width: 100%;
+      padding: 10px;
+      font-size: 16px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      box-sizing: border-box;
+    }
+
+    textarea {
+      min-height: 120px;
+      resize: vertical;
+    }
+
+    button {
+      margin-top: 15px;
+      background: #1f6feb;
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    button:hover {
+      background: #1558b0;
+    }
+
+    .results {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 15px;
+      margin-top: 20px;
+    }
+
+    .result-box {
+      padding: 15px;
+      border-radius: 10px;
+      color: white;
+      font-weight: bold;
+    }
+
+    .blue { background: #2563eb; }
+    .green { background: #16a34a; }
+    .red { background: #dc2626; }
+    .orange { background: #ea580c; }
+    .gray { background: #4b5563; }
+
+    .small {
+      font-size: 14px;
+      color: #444;
+      margin-top: 10px;
+      line-height: 1.5;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      background: white;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    th, td {
+      padding: 12px;
+      border-bottom: 1px solid #eee;
+      text-align: center;
+    }
+
+    th {
+      background: #111827;
+      color: white;
+    }
+
+    .buy { color: #16a34a; font-weight: bold; }
+    .sell { color: #dc2626; font-weight: bold; }
+    .hold { color: #ea580c; font-weight: bold; }
+  </style>
+</head>
+<body>
+
+  <h1>Stock Volatility Tracker App</h1>
+
+  <div class="card">
+    <label for="ticker">Stock Ticker</label>
+    <input type="text" id="ticker" placeholder="Example: AAPL" />
+
+    <label for="prices">Enter Closing Prices (comma separated)</label>
+    <textarea id="prices" placeholder="Example: 182,184,181,186,190,188,192,195,191,189"></textarea>
+
+    <button onclick="analyzeStock()">Analyze Stock</button>
+
+    <p class="small">
+      Enter at least 5 closing prices. The app calculates average price, volatility, trend, and a simple buy/sell signal.
+    </p>
+  </div>
+
+  <div id="output"></div>
+
+  <script>
+    function calculateMean(arr) {
+      return arr.reduce((sum, val) => sum + val, 0) / arr.length;
+    }
+
+    function calculateStdDev(arr) {
+      const mean = calculateMean(arr);
+      const squaredDiffs = arr.map(value => Math.pow(value - mean, 2));
+      const avgSquaredDiff = calculateMean(squaredDiffs);
+      return Math.sqrt(avgSquaredDiff);
+    }
+
+    function calculatePercentVolatility(arr) {
+      const mean = calculateMean(arr);
+      const stdDev = calculateStdDev(arr);
+      return (stdDev / mean) * 100;
+    }
+
+    function movingAverage(arr, period) {
+      if (arr.length < period) return null;
+      const slice = arr.slice(arr.length - period);
+      return calculateMean(slice);
+    }
+
+    function getSignal(prices) {
+      if (prices.length < 5) return "Not enough data";
+
+      const currentPrice = prices[prices.length - 1];
+      const shortMA = movingAverage(prices, 3);
+      const longMA = movingAverage(prices, 5);
+      const volatility = calculatePercentVolatility(prices);
+
+      if (!shortMA || !longMA) return "Not enough data";
+
+      if (currentPrice < longMA && shortMA > longMA && volatility < 5) {
+        return "BUY";
+      } else if (currentPrice > longMA && shortMA < longMA) {
+        return "SELL";
+      } else {
+        return "HOLD";
+      }
+    }
+
+    function getTrend(prices) {
+      const first = prices[0];
+      const last = prices[prices.length - 1];
+
+      if (last > first) return "Uptrend";
+      if (last < first) return "Downtrend";
+      return "Sideways";
+    }
+
+    function getVolatilityLevel(volatility) {
+      if (volatility < 2) return "Low";
+      if (volatility < 5) return "Moderate";
+      return "High";
+    }
+
+    function analyzeStock() {
+      const ticker = document.getElementById("ticker").value.trim().toUpperCase();
+      const pricesInput = document.getElementById("prices").value.trim();
+      const output = document.getElementById("output");
+
+      if (!ticker || !pricesInput) {
+        output.innerHTML = `
+          <div class="card">
+            <p style="color:red; font-weight:bold;">Please enter a stock ticker and prices.</p>
+          </div>
+        `;
+        return;
+      }
+
+      const prices = pricesInput
+        .split(",")
+        .map(p => Number(p.trim()))
+        .filter(p => !isNaN(p) && p > 0);
+
+      if (prices.length < 5) {
+        output.innerHTML = `
+          <div class="card">
+            <p style="color:red; font-weight:bold;">Please enter at least 5 valid prices.</p>
+          </div>
+        `;
+        return;
+      }
+
+      const avgPrice = calculateMean(prices).toFixed(2);
+      const currentPrice = prices[prices.length - 1].toFixed(2);
+      const volatility = calculatePercentVolatility(prices).toFixed(2);
+      const trend = getTrend(prices);
+      const signal = getSignal(prices);
+      const volatilityLevel = getVolatilityLevel(Number(volatility));
+      const shortMA = movingAverage(prices, 3)?.toFixed(2);
+      const longMA = movingAverage(prices, 5)?.toFixed(2);
+
+      let signalClass = "hold";
+      let signalColor = "orange";
+
+      if (signal === "BUY") {
+        signalClass = "buy";
+        signalColor = "green";
+      } else if (signal === "SELL") {
+        signalClass = "sell";
+        signalColor = "red";
+      }
+
+      let rows = "";
+      prices.forEach((price, index) => {
+        rows += `
+          <tr>
+            <td>Day ${index + 1}</td>
+            <td>$${price.toFixed(2)}</td>
+          </tr>
+        `;
+      });
+
+      output.innerHTML = `
+        <div class="card">
+          <h2>${ticker} Analysis</h2>
+          <div class="results">
+            <div class="result-box blue">Current Price<br>$${currentPrice}</div>
+            <div class="result-box gray">Average Price<br>$${avgPrice}</div>
+            <div class="result-box orange">Volatility<br>${volatility}% (${volatilityLevel})</div>
+            <div class="result-box blue">Trend<br>${trend}</div>
+            <div class="result-box ${signalColor}">Signal<br>${signal}</div>
+            <div class="result-box gray">3-Day MA / 5-Day MA<br>$${shortMA} / $${longMA}</div>
+          </div>
+
+          <p class="small">
+            <strong>How this works:</strong><br>
+            - <strong>Volatility</strong> measures how much the stock price moves.<br>
+            - <strong>BUY</strong>: price setup looks stronger with controlled volatility.<br>
+            - <strong>SELL</strong>: short-term momentum weakens after a rise.<br>
+            - <strong>HOLD</strong>: no clear setup yet.
+          </p>
+
+          <table>
+            <thead>
+              <tr>
+                <th>Day</th>
+                <th>Closing Price</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+  </script>
+</body>
+</html>
