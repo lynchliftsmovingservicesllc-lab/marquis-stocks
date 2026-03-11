@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Budget Investment Planner</title>
+    <script>
+        // Function to save data to localStorage
+        function saveData() {
+            const inputData = document.getElementById('dataInput').value;
+            localStorage.setItem('investmentData', inputData);
+            alert('Data saved successfully!');
+        }
+
+        // Function to retrieve data from localStorage
+        function loadData() {
+            const savedData = localStorage.getItem('investmentData');
+            if (savedData) {
+                document.getElementById('dataInput').value = savedData;
+            } else {
+                alert('No data found!');
+            }
+        }
+
+        // Load data when the page is loaded
+        window.onload = loadData;
+    </script>
+</head>
+<body>
+    <h1>Budget Investment Planner</h1>
+    <textarea id="dataInput" rows="10" cols="50" placeholder="Enter your investment data here..."></textarea>
+    <br>
+    <button onclick="saveData()">Save Data</button>
+</body>
+</html>
