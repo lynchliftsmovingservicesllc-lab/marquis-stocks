@@ -1,227 +1,78 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NBA Gambling Tracker</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-            max-width: 900px;
-        }
+const picks = [
+  { id: 1, name: "Trae Young", matchup: "ATL vs BOS", stat: "Points", line: 27.5 },
+  { id: 2, name: "Jayson Tatum", matchup: "BOS @ ATL", stat: "Rebounds", line: 8.5 },
+  { id: 3, name: "Stephen Curry", matchup: "GSW vs LAL", stat: "3PT Made", line: 4.5 },
+  { id: 4, name: "LeBron James", matchup: "LAL @ GSW", stat: "Assists", line: 7.5 }
+];
 
-        h1, h2 {
-            margin-bottom: 10px;
-        }
+const picksGrid = document.getElementById("picksGrid");
+const slipItems = document.getElementById("slipItems");
 
-        section {
-            margin-bottom: 30px;
-            padding: 15px;
-            border: 1px solid #ccc;
-            border-radius: 8px;
-        }
+const slip = [];
 
-        form {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            align-items: center;
-        }
+function renderPicks() {
+  picksGrid.innerHTML = "";
 
-        input, button {
-            padding: 8px;
-            font-size: 14px;
-        }
+  picks.forEach((pick) => {
+    const card = document.createElement("div");
+    card.className = "pick-card";
 
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 10px;
-        }
+    card.innerHTML = `
+      <div class="pick-title">${pick.name}</div>
+      <div class="pick-meta">${pick.matchup} • ${pick.stat}</div>
+      <div class="projection">${pick.line}</div>
+      <div class="choice-row">
+        <button class="choice-btn choice-more" data-id="${pick.id}" data-choice="More">More</button>
+        <button class="choice-btn choice-less" data-id="${pick.id}" data-choice="Less">Less</button>
+      </div>
+    `;
 
-        th, td {
-            border: 1px solid #ccc;
-            padding: 10px;
-            text-align: left;
-        }
+    picksGrid.appendChild(card);
+  });
 
-        th {
-            background: #f4f4f4;
-        }
+  document.querySelectorAll(".choice-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const id = Number(btn.dataset.id);
+      const choice = btn.dataset.choice;
+      addToSlip(id, choice);
+    });
+  });
+}
 
-        .win {
-            color: green;
-            font-weight: bold;
-        }
+function addToSlip(id, choice) {
+  const existing = slip.find((item) => item.id === id);
+  const pick = picks.find((p) => p.id === id);
 
-        .loss {
-            color: red;
-            font-weight: bold;
-        }
-    </style>
-</head>
-<body>
-    <h1>NBA Gambling Tracker</h1>
-    
-    <section id="data-input">
-        <h2>Real Data Input</h2>
-        <form id="dataForm">
-            <label for="team">Team:</label>
-            <input type="text" id="team" name="team" required>
+  if (!pick) return;
 
-            <label for="betAmount">Bet Amount:</label>
-            <input type="number" id="betAmount" name="betAmount" required>
+  if (existing) {
+    existing.choice = choice;
+  } else {
+    slip.push({ ...pick, choice });
+  }
 
-            <button type="submit">Submit</button>
-        </form>
-    </section>
-    
-    <section id="simulated-data">
-        <h2>Simulated Data Generator</h2>
-        <button id="generateData">Generate Simulated Data</button>
-    </section>
+  renderSlip();
+}
 
-    <section id="betting-tracker">
-        <h2>Betting Tracker</h2>
-        <table id="bettingTable">
-            <thead>
-                <tr>
-                    <th>Team</th>
-                    <th>Bet Amount</th>
-                    <th>Result</th>
-                    <th>Payout</th>
-                </tr>
-            </thead>
-            <tbody></tbody>
-        </table>
-    </section>
+function renderSlip() {
+  slipItems.innerHTML = "";
 
-    <section id="odds-calculator">
-        <h2>Odds Calculator</h2>
-        <input type="text" id="odds" placeholder="Enter odds like -110 or +150">
-        <button id="calculateOdds">Calculate</button>
-        <p id="result"></p>
-    </section>
+  if (!slip.length) {
+    slipItems.innerHTML = `<p>No picks selected yet.</p>`;
+    return;
+  }
 
-    <section id="analysis-tools">
-        <h2>Analysis Tools</h2>
-        <p>Total bets: <span id="totalBets">0</span></p>
-        <p>Total wagered: $<span id="totalWagered">0.00</span></p>
-    </section>
+  slip.forEach((item) => {
+    const div = document.createElement("div");
+    div.className = "slip-item";
+    div.innerHTML = `
+      <strong>${item.name}</strong>
+      <div>${item.choice} ${item.line} ${item.stat}</div>
+      <small>${item.matchup}</small>
+    `;
+    slipItems.appendChild(div);
+  });
+}
 
-    <script>
-        const form = document.getElementById("dataForm");
-        const teamInput = document.getElementById("team");
-        const betAmountInput = document.getElementById("betAmount");
-        const bettingTableBody = document.querySelector("#bettingTable tbody");
-        const generateDataBtn = document.getElementById("generateData");
-        const calculateOddsBtn = document.getElementById("calculateOdds");
-        const oddsInput = document.getElementById("odds");
-        const resultText = document.getElementById("result");
-        const totalBetsEl = document.getElementById("totalBets");
-        const totalWageredEl = document.getElementById("totalWagered");
-
-        let bets = [];
-
-        function renderTable() {
-            bettingTableBody.innerHTML = "";
-
-            bets.forEach(bet => {
-                const row = document.createElement("tr");
-
-                row.innerHTML = `
-                    <td>${bet.team}</td>
-                    <td>$${bet.betAmount.toFixed(2)}</td>
-                    <td class="${bet.result === "Win" ? "win" : "loss"}">${bet.result}</td>
-                    <td>$${bet.payout.toFixed(2)}</td>
-                `;
-
-                bettingTableBody.appendChild(row);
-            });
-
-            totalBetsEl.textContent = bets.length;
-            const totalWagered = bets.reduce((sum, bet) => sum + bet.betAmount, 0);
-            totalWageredEl.textContent = totalWagered.toFixed(2);
-        }
-
-        function addBet(team, betAmount) {
-            const didWin = Math.random() > 0.5;
-            const payout = didWin ? betAmount * 1.91 : 0;
-
-            bets.push({
-                team,
-                betAmount,
-                result: didWin ? "Win" : "Loss",
-                payout
-            });
-
-            renderTable();
-        }
-
-        form.addEventListener("submit", function (e) {
-            e.preventDefault();
-
-            const team = teamInput.value.trim();
-            const betAmount = parseFloat(betAmountInput.value);
-
-            if (!team || isNaN(betAmount) || betAmount <= 0) {
-                alert("Please enter a valid team and bet amount.");
-                return;
-            }
-
-            addBet(team, betAmount);
-
-            form.reset();
-        });
-
-        generateDataBtn.addEventListener("click", function () {
-            const sampleTeams = ["Hawks", "Lakers", "Celtics", "Bucks", "Suns"];
-
-            for (let i = 0; i < 5; i++) {
-                const randomTeam = sampleTeams[Math.floor(Math.random() * sampleTeams.length)];
-                const randomBet = Math.floor(Math.random() * 50) + 10;
-                addBet(randomTeam, randomBet);
-            }
-        });
-
-        calculateOddsBtn.addEventListener("click", function () {
-            const odds = oddsInput.value.trim();
-            const sampleBet = 100;
-
-            if (!odds) {
-                resultText.textContent = "Please enter odds.";
-                return;
-            }
-
-            const oddsNum = parseInt(odds, 10);
-
-            if (isNaN(oddsNum)) {
-                resultText.textContent = "Enter valid American odds, like -110 or +150.";
-                return;
-            }
-
-            let payout = 0;
-
-            if (oddsNum > 0) {
-                payout = sampleBet * (oddsNum / 100);
-            } else {
-                payout = sampleBet * (100 / Math.abs(oddsNum));
-            }
-
-            resultText.textContent = `A $${sampleBet} bet at ${odds} would profit $${payout.toFixed(2)}.`;
-        });
-
-        function loadFromURL() {
-            const params = new URLSearchParams(window.location.search);
-            const team = params.get("team");
-            const betAmount = params.get("betAmount");
-
-            if (team) teamInput.value = team;
-            if (betAmount) betAmountInput.value = betAmount;
-        }
-
-        loadFromURL();
-    </script>
-</body>
-</html>
+renderPicks();
+renderSlip();
