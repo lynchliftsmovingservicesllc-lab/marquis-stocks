@@ -5,7 +5,60 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NBA Gambling Tracker</title>
     <style>
-        /* Add necessary styles */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            max-width: 900px;
+        }
+
+        h1, h2 {
+            margin-bottom: 10px;
+        }
+
+        section {
+            margin-bottom: 30px;
+            padding: 15px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+        }
+
+        form {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+        }
+
+        input, button {
+            padding: 8px;
+            font-size: 14px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        th, td {
+            border: 1px solid #ccc;
+            padding: 10px;
+            text-align: left;
+        }
+
+        th {
+            background: #f4f4f4;
+        }
+
+        .win {
+            color: green;
+            font-weight: bold;
+        }
+
+        .loss {
+            color: red;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -16,8 +69,10 @@
         <form id="dataForm">
             <label for="team">Team:</label>
             <input type="text" id="team" name="team" required>
+
             <label for="betAmount">Bet Amount:</label>
             <input type="number" id="betAmount" name="betAmount" required>
+
             <button type="submit">Submit</button>
         </form>
     </section>
@@ -30,24 +85,143 @@
     <section id="betting-tracker">
         <h2>Betting Tracker</h2>
         <table id="bettingTable">
-            <!-- Betting records will be displayed here -->
+            <thead>
+                <tr>
+                    <th>Team</th>
+                    <th>Bet Amount</th>
+                    <th>Result</th>
+                    <th>Payout</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
         </table>
     </section>
 
     <section id="odds-calculator">
         <h2>Odds Calculator</h2>
-        <input type="text" id="odds" placeholder="Enter odds">
+        <input type="text" id="odds" placeholder="Enter odds like -110 or +150">
         <button id="calculateOdds">Calculate</button>
         <p id="result"></p>
     </section>
 
     <section id="analysis-tools">
         <h2>Analysis Tools</h2>
-        <p>Here you can implement various analysis functionalities.</p>
+        <p>Total bets: <span id="totalBets">0</span></p>
+        <p>Total wagered: $<span id="totalWagered">0.00</span></p>
     </section>
 
     <script>
-        // Add JavaScript code for handling form submission, generating data, and calculating odds
+        const form = document.getElementById("dataForm");
+        const teamInput = document.getElementById("team");
+        const betAmountInput = document.getElementById("betAmount");
+        const bettingTableBody = document.querySelector("#bettingTable tbody");
+        const generateDataBtn = document.getElementById("generateData");
+        const calculateOddsBtn = document.getElementById("calculateOdds");
+        const oddsInput = document.getElementById("odds");
+        const resultText = document.getElementById("result");
+        const totalBetsEl = document.getElementById("totalBets");
+        const totalWageredEl = document.getElementById("totalWagered");
+
+        let bets = [];
+
+        function renderTable() {
+            bettingTableBody.innerHTML = "";
+
+            bets.forEach(bet => {
+                const row = document.createElement("tr");
+
+                row.innerHTML = `
+                    <td>${bet.team}</td>
+                    <td>$${bet.betAmount.toFixed(2)}</td>
+                    <td class="${bet.result === "Win" ? "win" : "loss"}">${bet.result}</td>
+                    <td>$${bet.payout.toFixed(2)}</td>
+                `;
+
+                bettingTableBody.appendChild(row);
+            });
+
+            totalBetsEl.textContent = bets.length;
+            const totalWagered = bets.reduce((sum, bet) => sum + bet.betAmount, 0);
+            totalWageredEl.textContent = totalWagered.toFixed(2);
+        }
+
+        function addBet(team, betAmount) {
+            const didWin = Math.random() > 0.5;
+            const payout = didWin ? betAmount * 1.91 : 0;
+
+            bets.push({
+                team,
+                betAmount,
+                result: didWin ? "Win" : "Loss",
+                payout
+            });
+
+            renderTable();
+        }
+
+        form.addEventListener("submit", function (e) {
+            e.preventDefault();
+
+            const team = teamInput.value.trim();
+            const betAmount = parseFloat(betAmountInput.value);
+
+            if (!team || isNaN(betAmount) || betAmount <= 0) {
+                alert("Please enter a valid team and bet amount.");
+                return;
+            }
+
+            addBet(team, betAmount);
+
+            form.reset();
+        });
+
+        generateDataBtn.addEventListener("click", function () {
+            const sampleTeams = ["Hawks", "Lakers", "Celtics", "Bucks", "Suns"];
+
+            for (let i = 0; i < 5; i++) {
+                const randomTeam = sampleTeams[Math.floor(Math.random() * sampleTeams.length)];
+                const randomBet = Math.floor(Math.random() * 50) + 10;
+                addBet(randomTeam, randomBet);
+            }
+        });
+
+        calculateOddsBtn.addEventListener("click", function () {
+            const odds = oddsInput.value.trim();
+            const sampleBet = 100;
+
+            if (!odds) {
+                resultText.textContent = "Please enter odds.";
+                return;
+            }
+
+            const oddsNum = parseInt(odds, 10);
+
+            if (isNaN(oddsNum)) {
+                resultText.textContent = "Enter valid American odds, like -110 or +150.";
+                return;
+            }
+
+            let payout = 0;
+
+            if (oddsNum > 0) {
+                payout = sampleBet * (oddsNum / 100);
+            } else {
+                payout = sampleBet * (100 / Math.abs(oddsNum));
+            }
+
+            resultText.textContent = `A $${sampleBet} bet at ${odds} would profit $${payout.toFixed(2)}.`;
+        });
+
+        function loadFromURL() {
+            const params = new URLSearchParams(window.location.search);
+            const team = params.get("team");
+            const betAmount = params.get("betAmount");
+
+            if (team) teamInput.value = team;
+            if (betAmount) betAmountInput.value = betAmount;
+        }
+
+        loadFromURL();
     </script>
 </body>
 </html>
